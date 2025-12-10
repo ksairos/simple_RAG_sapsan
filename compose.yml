@@ -9,7 +9,7 @@ services:
       - "6333"
       - "6334"
     volumes:
-      - ./src/qdrant_db/qdrant_data:/qdrant/storage
+      - ./files/vectors:/qdrant/storage
     networks:
       - app-network
 
