@@ -3,11 +3,8 @@ from uuid import uuid4
 
 from langchain.agents import create_agent
 from langchain.tools import tool
-from langchain.chat_models import init_chat_model
 from langchain_community.document_loaders import Docx2txtLoader
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient
@@ -20,7 +17,6 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
 
 def create_vector_store(file_id: str, file_path: str):
-    # Загрузка документов и чанкование
     loader = Docx2txtLoader(file_path)
     docs = loader.load()
 
@@ -32,7 +28,6 @@ def create_vector_store(file_id: str, file_path: str):
 
     splits = text_splitter.split_documents(docs)
 
-    # Создание коллекции по имени документа
     client.create_collection(
         collection_name=file_id,
         vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
@@ -42,7 +37,6 @@ def create_vector_store(file_id: str, file_path: str):
         client=client, collection_name=file_id, embedding=embeddings
     )
 
-    # Загрузка чанков
     uuids = [str(uuid4()) for _ in range(len(splits))]
     vector_store.add_documents(documents=splits, ids=uuids)
 

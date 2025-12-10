@@ -47,6 +47,7 @@ async def upload_question(question: QuestionModel, background_tasks: BackgroundT
     question_id = str(uuid.uuid4())
     JOBS[question_id] = {"answer": None, "status": JobStatus.processing}
 
+    # Пока обрабатывается запрос, будет выводиться статус "processing"
     background_tasks.add_task(
         process_question, question_id, question.file_id, question.question
     )
