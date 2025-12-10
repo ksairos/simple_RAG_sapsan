@@ -8,6 +8,7 @@ class JobStatus(str, Enum):
     """
     Статус обработки вопроса
     """
+
     processing = "processing"
     success = "success"
     error = "error"
