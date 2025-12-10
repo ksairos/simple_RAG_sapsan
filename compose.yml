@@ -21,6 +21,9 @@ services:
       - app-network
     depends_on:
       - qdrant
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_URL=http://qdrant:6333
 
 networks:
   app-network:
