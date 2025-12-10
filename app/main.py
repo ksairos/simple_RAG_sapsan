@@ -4,14 +4,10 @@ import os
 from pathlib import Path
 from typing import Dict
 
-from fastapi import FastAPI, UploadFile, HTTPException, File
-from langchain_openai import OpenAIEmbeddings
-from langchain_qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import VectorParams, Distance
+from fastapi import FastAPI, UploadFile, HTTPException
 from starlette.background import BackgroundTasks
 
-from app.rag import create_vector_store
+from app.rag import create_vector_store, generate_answer
 from app.schemas import JobStatus, AnswerModel, QuestionModel
 
 FILES_DIR = Path("files")
@@ -20,7 +16,6 @@ os.makedirs(FILES_DIR, exist_ok=True)
 QDRANT_URL = os.environ.get("QDRANT_URL")
 os.environ.get("OPENAI_API_KEY")
 
-SAVED_FILE: Dict[str, str] = {}
 JOBS: Dict[str, dict] = {}
 
 app = FastAPI()
@@ -36,6 +31,9 @@ async def upload_file(file: UploadFile):
     file_id = str(uuid.uuid4())
     file_path = FILES_DIR / file_id
 
+    with file_path.open("wb") as dest_file:
+        shutil.copyfileobj(file.file, dest_file)
+
     try:
         create_vector_store(file_id, str(file_path))
     except Exception as e:
@@ -46,9 +44,6 @@ async def upload_file(file: UploadFile):
 
 @app.post("/upload_question")
 async def upload_question(question: QuestionModel, background_tasks: BackgroundTasks):
-    if not SAVED_FILE:
-        raise HTTPException(status_code=400, detail="No files uploaded")
-
     question_id = str(uuid.uuid4())
     JOBS[question_id] = {"answer": None, "status": JobStatus.processing}
 
@@ -69,16 +64,10 @@ async def get_answer(question_id: str):
 
 def process_question(question_id: str, file_id: str, question: str):
     try:
-        file_path = SAVED_FILE.get(file_id)
-        if not file_path:
-            raise HTTPException(status_code=404, detail="File not found")
-
-        simulated_answer = (
-            f"Временный ответ на: '{question}'. Контекст файла ID: {file_id}"
-        )
+        answer = generate_answer(file_id, question)
 
         JOBS[question_id]["status"] = JobStatus.success
-        JOBS[question_id]["answer"] = simulated_answer
+        JOBS[question_id]["answer"] = answer
 
     except Exception as e:
         print(f"Error processing question {question}: {e}")

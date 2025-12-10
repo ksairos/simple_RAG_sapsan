@@ -13,6 +13,7 @@ dependencies = [
     "langchain-qdrant>=1.1.0",
     "langchain-text-splitters>=1.0.0",
     "pydantic>=2.12.5",
+    "python-docx>=1.2.0",
     "python-multipart>=0.0.20",
     "qdrant-client>=1.16.1",
 ]

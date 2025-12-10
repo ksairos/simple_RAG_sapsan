@@ -8,8 +8,6 @@ services:
     expose:
       - "6333"
       - "6334"
-    volumes:
-      - ./files/vectors:/qdrant/storage
     networks:
       - app-network
 
