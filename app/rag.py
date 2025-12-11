@@ -5,18 +5,39 @@ from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_community.document_loaders import Docx2txtLoader
 from langchain_openai import OpenAIEmbeddings
-from langchain_qdrant import QdrantVectorStore
+from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import VectorParams, Distance
+from qdrant_client.http.models import (
+    VectorParams,
+    Distance,
+    SparseVectorParams,
+    Modifier,
+    SparseIndexParams,
+)
+
 
 QDRANT_URL = os.environ.get("QDRANT_URL")
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP"))
+VECTOR_NAME = "dense"
+SPARSE_VECTOR_NAME = "sparse"
 
 client = QdrantClient(url=QDRANT_URL)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
 
+
+def get_vector_store(collection_name: str) -> QdrantVectorStore:
+    return QdrantVectorStore(
+        client=client,
+        collection_name=collection_name,
+        embedding=embeddings,
+        sparse_embedding=sparse_embeddings,
+        retrieval_mode=RetrievalMode.HYBRID,
+        vector_name=VECTOR_NAME,
+        sparse_vector_name=SPARSE_VECTOR_NAME,
+    )
 
 def create_vector_store(file_id: str, file_path: str):
     loader = Docx2txtLoader(file_path)
@@ -31,25 +52,26 @@ def create_vector_store(file_id: str, file_path: str):
 
     client.create_collection(
         collection_name=file_id,
-        vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+        vectors_config={VECTOR_NAME: VectorParams(size=1536, distance=Distance.COSINE)},
+        sparse_vectors_config={
+            SPARSE_VECTOR_NAME: SparseVectorParams(
+                modifier=Modifier.IDF, index=SparseIndexParams(on_disk=False)
+            )
+        },
     )
 
-    vector_store = QdrantVectorStore(
-        client=client, collection_name=file_id, embedding=embeddings
-    )
+    vector_store = get_vector_store(collection_name=file_id)
 
     uuids = [str(uuid4()) for _ in range(len(splits))]
     vector_store.add_documents(documents=splits, ids=uuids)
 
 
 def generate_answer(file_id: str, question: str) -> str:
-    vector_store = QdrantVectorStore(
-        client=client, collection_name=file_id, embedding=embeddings
-    )
+    vector_store = get_vector_store(collection_name=file_id)
 
     @tool(
         response_format="content_and_artifact",
-        description="Retrieve Context for the answer"
+        description="Retrieve Context for the answer",
     )
     def retrieve(query: str):
         retrieved_docs = vector_store.similarity_search(query)
