@@ -39,6 +39,7 @@ def get_vector_store(collection_name: str) -> QdrantVectorStore:
         sparse_vector_name=SPARSE_VECTOR_NAME,
     )
 
+
 def create_vector_store(file_id: str, file_path: str):
     loader = Docx2txtLoader(file_path)
     docs = loader.load()
