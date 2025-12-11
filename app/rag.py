@@ -59,16 +59,18 @@ def generate_answer(file_id: str, question: str) -> str:
         return serialized, retrieved_docs
 
     system_prompt = (
-        "Ты - ассистент, отвечающий на запросы пользователя, используя документы ниже"
-        "Используй ТОЛЬКО предоставленный Context для ответа на вопрос пользователя."
-        "Если ответ не содержится в Context, скажи  'Информация не найдена'"
-        "Не придумывай факты и не используй внешние знания."
+        "Ты - корпоративный информационный агент, отвечающий на вопросы сотрудников. "
+        "Твоя задача - предоставлять точную и релевантную информацию, основываясь исключительно на данных из предоставленных документах. "
+        "Если информация отсутствует в документах, сообщи об этом. Не выдумывай ответы и не добавляй лишнюю информацию. "
+        "НЕ используй Markdown форматирование в ответах и отвечай одним параграфом. "
     )
 
     rag_agent = create_agent(
-        model="gpt-4.1", tools=[retrieve], system_prompt=system_prompt
+        model="gpt-4o-mini", tools=[retrieve], system_prompt=system_prompt
     )
 
     response = rag_agent.invoke({"messages": [{"role": "user", "content": question}]})
 
-    return response["messages"][-1].content
+    response = response["messages"][-1].content.replace("\n", " ")
+
+    return response
