@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from langchain.agents import create_agent
 from langchain.tools import tool
-from langchain_community.document_loaders import Docx2txtLoader
+from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -16,6 +16,7 @@ from qdrant_client.http.models import (
     SparseIndexParams,
 )
 
+from scripts.clean_text import clean_docx_text
 
 QDRANT_URL = os.environ.get("QDRANT_URL")
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE"))
@@ -41,8 +42,11 @@ def get_vector_store(collection_name: str) -> QdrantVectorStore:
 
 
 def create_vector_store(file_id: str, file_path: str):
-    loader = Docx2txtLoader(file_path)
-    docs = loader.load()
+    text = clean_docx_text(file_path)
+    docs = [Document(page_content=text)]
+
+    # loader = TextLoader(file_path)
+    # docs = loader.load()
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
