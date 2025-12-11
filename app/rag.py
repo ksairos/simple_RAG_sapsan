@@ -11,6 +11,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance
 
 QDRANT_URL = os.environ.get("QDRANT_URL")
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP"))
 
 client = QdrantClient(url=QDRANT_URL)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -20,10 +22,9 @@ def create_vector_store(file_id: str, file_path: str):
     loader = Docx2txtLoader(file_path)
     docs = loader.load()
 
-    # Размер чатка сделал большим, чтобы загрузить весь файл. Можно модифицировать
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1080 * 44,
-        chunk_overlap=200,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
     )
 
     splits = text_splitter.split_documents(docs)
@@ -59,6 +60,9 @@ def generate_answer(file_id: str, question: str) -> str:
 
     system_prompt = (
         "Ты - ассистент, отвечающий на запросы пользователя, используя документы ниже"
+        "Используй ТОЛЬКО предоставленный Context для ответа на вопрос пользователя."
+        "Если ответ не содержится в Context, скажи  'Информация не найдена'"
+        "Не придумывай факты и не используй внешние знания."
     )
 
     rag_agent = create_agent(
